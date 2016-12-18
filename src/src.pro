@@ -37,7 +37,8 @@ SOURCES   += main.cpp \
              pass.cpp \
              realpass.cpp \
              imitatepass.cpp \
-             executor.cpp
+             executor.cpp \
+             renamedialog.cpp
 
 HEADERS   += mainwindow.h \
              configdialog.h \
@@ -58,13 +59,15 @@ HEADERS   += mainwindow.h \
              imitatepass.h \
              datahelpers.h \
              debughelper.h \
-             executor.h
+             executor.h \
+             renamedialog.h
 
 FORMS     += mainwindow.ui \
              configdialog.ui \
              usersdialog.ui \
              keygendialog.ui \
-             passworddialog.ui
+             passworddialog.ui \
+             renamedialog.ui
 
 clang|gcc:QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 

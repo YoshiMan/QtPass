@@ -26,6 +26,7 @@
 #include "ui_mainwindow.h"
 #include "usersdialog.h"
 #include "util.h"
+#include "renamedialog.h"
 
 /**
  * @brief MainWindow::MainWindow handles all of the main functionality and also
@@ -1301,7 +1302,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
 }
 
 /**
- * @brief MainWindow::keyPressEvent did anyone press return, enter or escape?
+ * @brief MainWindow::keyPressEvent did anyone press return, enter, escape or F2?
  * @param event
  */
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -1316,6 +1317,22 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
   case Qt::Key_Escape:
     ui->lineEdit->clear();
     break;
+  case Qt::Key_F2:
+  {
+    QModelIndex currentQModelIndex = ui->treeView->currentIndex();
+    if(currentQModelIndex.isValid()){
+        QFileInfo qFileInfo = model.fileInfo(proxyModel.mapToSource(currentQModelIndex));
+        RenameDialog renameDialog(qFileInfo, this);
+        int execValue = renameDialog.exec();
+        if (execValue) {
+          if (renameDialog.result() == QDialog::Accepted) {
+
+          }
+        }
+
+    }
+  }
+  break;
   default:
     break;
   }
