@@ -733,6 +733,17 @@ void MainWindow::DisplayInTextBrowser(QString output, QString prefix,
   ui->textBrowser->setHtml(output);
 }
 
+void MainWindow::openRenameDialog()
+{
+    QModelIndex currentQModelIndex = ui->treeView->currentIndex();
+    if(currentQModelIndex.isValid()){
+        QFileInfo qFileInfo = model.fileInfo(proxyModel.mapToSource(currentQModelIndex));
+        RenameDialog renameDialog(qFileInfo, this);
+        connect(&renameDialog, SIGNAL(showStatusMessageOnMainWindow(QString, int)), this, SLOT(showStatusMessage(QString, int)));
+        renameDialog.exec();
+    }
+}
+
 void MainWindow::processErrorExit(const QString &p_error) {
   if (!p_error.isEmpty()) {
     QString output;
@@ -1319,18 +1330,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     break;
   case Qt::Key_F2:
   {
-    QModelIndex currentQModelIndex = ui->treeView->currentIndex();
-    if(currentQModelIndex.isValid()){
-        QFileInfo qFileInfo = model.fileInfo(proxyModel.mapToSource(currentQModelIndex));
-        RenameDialog renameDialog(qFileInfo, this);
-        int execValue = renameDialog.exec();
-        if (execValue) {
-          if (renameDialog.result() == QDialog::Accepted) {
-
-          }
-        }
-
-    }
+    openRenameDialog();
   }
   break;
   default:
@@ -1372,7 +1372,8 @@ void MainWindow::showContextMenu(const QPoint &pos) {
   } else if (fileOrFolder.isFile()) {
     QAction *edit = contextMenu.addAction(tr("Edit"));
     connect(edit, SIGNAL(triggered()), this, SLOT(editPassword()));
-  }
+  }  
+
   if (selected) {
     // if (useClipboard != CLIPBOARD_NEVER) {
     // contextMenu.addSeparator();
@@ -1381,6 +1382,9 @@ void MainWindow::showContextMenu(const QPoint &pos) {
     // connect(copyItem, SIGNAL(triggered()), this,
     // SLOT(copyPasswordToClipboard()));
     // }
+    QAction *renameItem = contextMenu.addAction(tr("Rename"));
+    connect(renameItem, SIGNAL(triggered()), this,
+            SLOT(openRenameDialog()));
     contextMenu.addSeparator();
     QAction *deleteItem = contextMenu.addAction(tr("Delete"));
     connect(deleteItem, SIGNAL(triggered()), this,

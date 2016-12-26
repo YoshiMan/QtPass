@@ -21,6 +21,7 @@ class ImitatePass : public Pass {
 
   void GitCommit(const QString &file, const QString &msg);
 
+  bool hasSneakyPaths(const QStringList paths);
 public:
   ImitatePass();
   virtual ~ImitatePass() {}
@@ -43,7 +44,7 @@ signals:
 
   // Pass interface
 public:
-  void Move(const QString src, const QString dest,
+  void Move(const QString srcParam, const QString destParam,
             const bool force = false) Q_DECL_OVERRIDE;
   void Copy(const QString src, const QString dest,
             const bool force = false) Q_DECL_OVERRIDE;

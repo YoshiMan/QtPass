@@ -174,3 +174,11 @@ void Util::copyDir(const QString src, const QString dest)
         QFile::copy(src + QDir::separator() + file, dest + QDir::separator() + file);
     }
 }
+
+QString Util::removeOneTrailingSlash(const QString toRemoveParam){
+    QString toRemove = toRemoveParam;
+    if(toRemove.lastIndexOf(QDir::separator()) == toRemove.length()-1){
+        toRemove.chop(1);
+    }
+    return toRemove;
+}

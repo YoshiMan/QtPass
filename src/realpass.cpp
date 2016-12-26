@@ -103,7 +103,7 @@ void RealPass::Move(const QString src, const QString dest, const bool force) {
 
   // force mode?
   // pass uses always the force mode, when call from eg. QT. so we have to check
-  // if this are to files
+  // if this are two files
   // and the user didnt want to move force
   if (force == false && srcFileInfo.isFile() && destFileInfo.isFile()) {
     return;
@@ -113,14 +113,9 @@ void RealPass::Move(const QString src, const QString dest, const bool force) {
                         .relativeFilePath(QDir(src).absolutePath());
   QString passDest = QDir(QtPassSettings::getPassStore())
                          .relativeFilePath(QDir(dest).absolutePath());
-
-  // remove the .gpg because pass will not work
-  if (srcFileInfo.isFile() && srcFileInfo.suffix() == "gpg") {
-    passSrc.replace(QRegExp("\\.gpg$"), "");
-  }
-  if (destFileInfo.isFile() && destFileInfo.suffix() == "gpg") {
-    passDest.replace(QRegExp("\\.gpg$"), "");
-  }
+  // replace .gpg, becaus pass doesnt use this
+  passSrc.replace(QRegExp("\\.gpg$"), "");
+  passDest.replace(QRegExp("\\.gpg$"), "");
 
   QStringList args;
   args << "mv";

@@ -107,6 +107,8 @@ private slots:
   void passShowHandler(const QString &);
 
   void processErrorExit(const QString &);
+  void openRenameDialog();
+
 
 private:
   QAction *actionAddPassword;

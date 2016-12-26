@@ -1,6 +1,7 @@
 #include "imitatepass.h"
 #include "debughelper.h"
 #include "qtpasssettings.h"
+#include "util.h"
 #include <QDirIterator>
 
 /**
@@ -313,43 +314,83 @@ void ImitatePass::reencryptPath(QString dir) {
   emit endReencryptPath();
 }
 
-void ImitatePass::Move(const QString src, const QString dest, const bool force)
+void ImitatePass::Move(const QString srcParam, const QString destParam, const bool force)
 {
-    QFileInfo destFileInfo(dest);
+
+    QString src(QDir(QtPassSettings::getPassStore()).relativeFilePath(srcParam));
+    QString dest(QDir(QtPassSettings::getPassStore()).relativeFilePath(destParam));
+    // replace .gpg, becaus pass doesnt use this as well
+    src.replace(QRegExp("\\.gpg$"), "");
+    dest.replace(QRegExp("\\.gpg$"), "");
+
+    // from now on this is like the pass shell script
+    if(src.trimmed().isEmpty()){
+        statusMsg(tr("You passed an empty source") , 5000);
+        return;
+    }
+    if(dest.trimmed().isEmpty()){
+        statusMsg(tr("You passed an empty destination") , 5000);
+        return;
+    }
+    if (hasSneakyPaths({src, dest})){
+        statusMsg(tr("You've attempted to pass a sneaky path.\"%1\" or \"%2\"").arg(src).arg(dest) , 5000);
+        return;
+    }
+    QFileInfo old_path(QtPassSettings::getPassStore() + Util::removeOneTrailingSlash(src));
+    QFileInfo old_dir(old_path);
+    QFileInfo new_path(QtPassSettings::getPassStore() + dest);
+
+    QFileInfo old_pathGpg(old_path.absoluteFilePath() + ".gpg");
+    if(((old_pathGpg.isFile() && old_path.isDir()) || srcParam.endsWith(QDir::separator()) || old_pathGpg.isFile() == false) == false){
+        old_dir = QFileInfo(old_path.dir().absolutePath());
+        old_path = old_pathGpg;
+    }
+    if(old_path.exists()==false){
+        statusMsg(tr("\"%1\" is not in the password store").arg(srcParam) , 5000);
+        return;
+    }
+    // just created a QDir to call mkdir
+    QDir qDir;
+    qDir.mkpath(new_path.dir().absolutePath());
+    if((old_path.isDir() || new_path.isDir() || new_path.absoluteFilePath().endsWith(QDir::separator())) == false){
+        new_path = new_path.absoluteFilePath() + ".gpg";
+    }
+
+
     if (QtPassSettings::isUseGit()) {
-      QStringList args;
-      args << "mv";
-      if(force){
+        QStringList args;
+        args << "mv";
+        if(force){
           args << "-f";
-      }
-      args << src;
-      args << dest;
-      executeGit(GIT_MOVE, args);
+        }
+        args << old_path.absoluteFilePath();
+        args << new_path.absoluteFilePath();
+        executeGit(GIT_MOVE, args);
 
-      QString message=QString("moved from %1 to %2 using QTPass.");
-      message= message.arg(src).arg(dest);
-      GitCommit("", message);
-      if(QtPassSettings::isAutoPush()){
+        QString message=QString("moved from %1 to %2 using QTPass.");
+        message= message.arg(src).arg(dest);
+        GitCommit("", message);
+        if(QtPassSettings::isAutoPush()){
           GitPush();
-      }
-
+        }
     } else {
-        QDir qDir;
-        QFileInfo srcFileInfo(src);
-        QString destCopy = dest;
-        if(srcFileInfo.isFile() && destFileInfo.isDir()){
-            destCopy = destFileInfo.absoluteFilePath() + QDir::separator() + srcFileInfo.fileName();
+        QString destCopy = new_path.absoluteFilePath();
+        if(old_path.isFile() && new_path.isDir()){
+            destCopy = new_path.absoluteFilePath() + QDir::separator() + old_path.fileName();
         }
         if(force){
             qDir.remove(destCopy);
         }
-        qDir.rename(src, destCopy);
+        bool success = qDir.rename(old_path.absoluteFilePath(), destCopy);
+        if(success == false){
+            statusMsg(tr("the renaming wasnt success full"), 5000);
+        }
     }
     // reecrypt all files under the new folder
-    if(destFileInfo.isDir()){
-        reencryptPath(destFileInfo.absoluteFilePath());
-    }else if(destFileInfo.isFile()){
-        reencryptPath(destFileInfo.dir().path());
+    if(new_path.isDir()){
+        reencryptPath(new_path.absoluteFilePath());
+    }else if(new_path.isFile()){
+        reencryptPath(new_path.dir().path());
     }
 }
 
@@ -387,4 +428,29 @@ void ImitatePass::Copy(const QString src, const QString dest, const bool force)
     }else if(destFileInfo.isFile()){
         reencryptPath(destFileInfo.dir().path());
     }
+}
+/**
+ * @brief ImitatePass::hasSneakyPaths
+ *  you cant move copy accross the file system.
+ *  adapted from the original pass implementation
+ *  see https://www.passwordstore.org/
+ * @param paths to check
+ * @return
+ */
+bool ImitatePass::hasSneakyPaths(const QStringList paths){
+    foreach (QString path, paths) {
+        if(path.startsWith("/..")){
+            return true;
+        }
+        if(path.endsWith("../")){
+            return true;
+        }
+        if(path.contains("/..")){
+            return true;
+        }
+        if(path == ".."){
+            return true;
+        }
+    }
+    return false;
 }
