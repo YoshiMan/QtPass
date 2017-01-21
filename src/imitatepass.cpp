@@ -325,7 +325,17 @@ void ImitatePass::reencryptPath(QString dir) {
 
 void ImitatePass::Move(const QString srcParam, const QString destParam, const bool force)
 {
+    copyMove(srcParam, destParam, force, true);
+}
 
+
+void ImitatePass::Copy(const QString srcParam, const QString destParam, const bool force)
+{
+    copyMove(srcParam, destParam, force, false);
+}
+
+
+void ImitatePass::copyMove(const QString srcParam, const QString destParam, const bool force ,const bool move){
     QString src(QDir(QtPassSettings::getPassStore()).relativeFilePath(srcParam));
     QString dest(QDir(QtPassSettings::getPassStore()).relativeFilePath(destParam));
     // replace .gpg, becaus pass doesnt use this as well
@@ -358,85 +368,76 @@ void ImitatePass::Move(const QString srcParam, const QString destParam, const bo
         statusMsg(tr("\"%1\" is not in the password store").arg(srcParam) , 5000);
         return;
     }
-    // just created a QDir to call mkdir
+    // just created a QDir to call mkpath
     QDir qDir;
     qDir.mkpath(new_path.dir().absolutePath());
     if((old_path.isDir() || new_path.isDir() || new_path.absoluteFilePath().endsWith(QDir::separator())) == false){
         new_path = new_path.absoluteFilePath() + ".gpg";
     }
 
-
-    if (QtPassSettings::isUseGit()) {
-        QStringList args;
-        args << "mv";
-        if(force){
-          args << "-f";
-        }
-        args << old_path.absoluteFilePath();
-        args << new_path.absoluteFilePath();
-        executeGit(GIT_MOVE, args);
-
-        QString message=QString("moved from %1 to %2 using QTPass.");
-        message= message.arg(src).arg(dest);
-        GitCommit("", message);
-        if(QtPassSettings::isAutoPush()){
-          GitPush();
-        }
-    } else {
-        QString destCopy = new_path.absoluteFilePath();
-        if(old_path.isFile() && new_path.isDir()){
-            destCopy = new_path.absoluteFilePath() + QDir::separator() + old_path.fileName();
-        }
-        if(force){
-            qDir.remove(destCopy);
-        }
+    QString destCopy = new_path.absoluteFilePath();
+    // moving/copying a file into a folder
+    if(old_path.isFile() && new_path.isDir()){
+        destCopy = new_path.absoluteFilePath() + QDir::separator() + old_path.fileName();
+    }
+    if(force){
+        qDir.remove(destCopy);
+    }
+    if(move){
         bool success = qDir.rename(old_path.absoluteFilePath(), destCopy);
         if(success == false){
-            statusMsg(tr("the renaming wasnt success full"), 5000);
+            statusMsg(tr("the moving wasnt successfull"), 5000);
+        }
+        if(QFileInfo(destCopy).exists()){
+            // reecrypt all files under the new folder
+            reencryptPath(new_path.absoluteFilePath());
+        }
+        old_path.refresh();
+        if (QtPassSettings::isUseGit() && QFileInfo(old_path).exists() == false) {
+            QStringList argsRm;
+            argsRm << "rm";
+            argsRm << "-qr";
+            argsRm << old_path.absoluteFilePath();
+            executeGit(GIT_RM, argsRm);
+
+            QStringList argsAdd;
+            argsAdd << "add";
+            argsAdd << destCopy;
+            executeGit(GIT_ADD, argsAdd);
+
+            QString message=QString("moved from %1 to %2 using QTPass.");
+            message= message.arg(old_path.absoluteFilePath()).arg(destCopy);
+            GitCommit(destCopy, message);
+            if(QtPassSettings::isAutoPush()){
+              GitPush();
+            }
+        }
+    }else{
+        bool success = QFile::copy(old_path.absoluteFilePath(), destCopy);
+        if(success == false){
+            statusMsg(tr("the copying wasnt successfull"), 5000);
+        }
+        if(QFileInfo(destCopy).exists()){
+            // reecrypt all files under the new folder
+            reencryptPath(new_path.absoluteFilePath());
+        }
+        old_path.refresh();
+        if (QtPassSettings::isUseGit() && old_path.exists() == false) {
+            QStringList argsAdd;
+            argsAdd << "add";
+            argsAdd << destCopy;
+            executeGit(GIT_ADD, argsAdd);
+
+            QString message=QString("copied from %1 to %2 using QTPass.");
+            message= message.arg(old_path.absoluteFilePath()).arg(destCopy);
+            GitCommit(destCopy, message);
+            if(QtPassSettings::isAutoPush()){
+              GitPush();
+            }
         }
     }
-    // reecrypt all files under the new folder
-    if(new_path.isDir()){
-        reencryptPath(new_path.absoluteFilePath());
-    }else if(new_path.isFile()){
-        reencryptPath(new_path.dir().path());
-    }
-}
 
-
-void ImitatePass::Copy(const QString src, const QString dest, const bool force)
-{
-    QFileInfo destFileInfo(dest);
-    if (QtPassSettings::isUseGit()) {
-        QStringList args;
-        args << "cp";
-        if(force){
-            args << "-f";
-        }
-        args << src;
-        args << dest;
-        executeGit(GIT_COPY, args);
-
-        QString message=QString("copied from %1 to %2 using QTPass.");
-        message= message.arg(src).arg(dest);
-        GitCommit("", message);
-        if(QtPassSettings::isAutoPush()){
-            GitPush();
-        }
-
-    } else {
-        QDir qDir;
-        if(force){
-            qDir.remove(dest);
-        }
-        QFile::copy(src, dest);
-    }
-    // reecrypt all files under the new folder
-    if(destFileInfo.isDir()){
-        reencryptPath(destFileInfo.absoluteFilePath());
-    }else if(destFileInfo.isFile()){
-        reencryptPath(destFileInfo.dir().path());
-    }
+    // end pass shell script
 }
 /**
  * @brief ImitatePass::hasSneakyPaths
@@ -448,13 +449,13 @@ void ImitatePass::Copy(const QString src, const QString dest, const bool force)
  */
 bool ImitatePass::hasSneakyPaths(const QStringList paths){
     foreach (QString path, paths) {
-        if(path.startsWith("/..")){
+        if(path.endsWith("/..")){
             return true;
         }
-        if(path.endsWith("../")){
+        if(path.startsWith("../")){
             return true;
         }
-        if(path.contains("/..")){
+        if(path.contains("/../")){
             return true;
         }
         if(path == ".."){

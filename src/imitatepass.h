@@ -15,6 +15,7 @@ class ImitatePass : public Pass {
   void GitCommit(const QString &file, const QString &msg);
 
   bool hasSneakyPaths(const QStringList paths);
+  void copyMove(const QString srcParam, const QString destParam, const bool force, const bool move);
 public:
   ImitatePass();
   virtual ~ImitatePass() {}
