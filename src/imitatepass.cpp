@@ -228,8 +228,19 @@ void ImitatePass::reencryptPath(QString dir) {
     GitPull_b();
   }
   QDir currentDir;
-  QDirIterator gpgFiles(dir, QStringList() << "*.gpg", QDir::Files,
+  QFileInfo fileInfo(dir);
+  QDir dirForIterator;
+  QStringList filter;
+  if(fileInfo.isDir()){
+      dirForIterator=fileInfo.absoluteDir();
+      filter.append("*.gpg");
+  }else if(fileInfo.isFile()){
+      dirForIterator=fileInfo.dir();
+      filter.append(fileInfo.fileName());
+  }
+  QDirIterator gpgFiles(dirForIterator.absolutePath(), filter , QDir::Files,
                         QDirIterator::Subdirectories);
+
   QStringList gpgId;
   while (gpgFiles.hasNext()) {
     QString fileName = gpgFiles.next();
