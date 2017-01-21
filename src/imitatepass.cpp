@@ -463,3 +463,24 @@ bool ImitatePass::hasSneakyPaths(const QStringList paths){
     }
     return false;
 }
+
+/**
+ * @brief ImitatePass::executeGpg easy wrapper for running gpg commands
+ * @param args
+ */
+void ImitatePass::executeGpg(int id, const QStringList &args, QString input,
+                      bool readStdout,bool readStderr)
+{
+    executeWrapper(id, QtPassSettings::getGpgExecutable(), args, input,
+                   readStdout, readStderr);
+}
+/**
+ * @brief ImitatePass::executeGit easy wrapper for running git commands
+ * @param args
+ */
+void ImitatePass::executeGit(int id, const QStringList &args, QString input,
+                      bool readStdout,bool readStderr)
+{
+    executeWrapper(id, QtPassSettings::getGitExecutable(), args, input,
+                   readStdout, readStderr);
+}

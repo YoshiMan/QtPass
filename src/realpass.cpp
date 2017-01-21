@@ -92,6 +92,17 @@ void RealPass::Init(QString path, const QList<UserInfo> &users) {
 }
 
 /**
+ * @brief RealPass::executePass easy wrapper for running pass
+ * @param args
+ */
+void RealPass::executePass(int id, const QStringList &args, QString input,
+                       bool readStdout ,bool readStderr)
+{
+    executeWrapper(id, QtPassSettings::getPassExecutable(), args , input,
+                   readStdout, readStderr);
+}
+
+/**
  * @brief RealPass::Move move a file (or folder)
  * @param src source file or folder
  * @param dest destination file or folder
@@ -119,9 +130,6 @@ void RealPass::Move(const QString src, const QString dest, const bool force) {
 
   QStringList args;
   args << "mv";
-  if (force) {
-    args << "-f";
-  }
   args << passSrc;
   args << passDest;
   executePass(PASS_MOVE, args);

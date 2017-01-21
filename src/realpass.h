@@ -29,6 +29,10 @@ public:
             const bool force = false) Q_DECL_OVERRIDE;
   void Copy(const QString src, const QString dest,
             const bool force = false) Q_DECL_OVERRIDE;
+private:
+  void executePass(int id, const QStringList &arg, QString input = QString(),
+                  bool readStdout = true,bool readStderr = true);
+
 };
 
 #endif // REALPASS_H

@@ -227,34 +227,3 @@ QString Pass::getRecipientString(QString for_file, QString separator,
   return recipients_str;
 }
 
-/**
- * @brief Pass::executePass easy wrapper for running pass
- * @param args
- */
-void Pass::executePass(int id, const QStringList &args, QString input,
-                       bool readStdout ,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getPassExecutable(), args , input,
-                   readStdout, readStderr);
-}
-
-/**
- * @brief Pass::executeGpg easy wrapper for running gpg commands
- * @param args
- */
-void Pass::executeGpg(int id, const QStringList &args, QString input,
-                      bool readStdout,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getGpgExecutable(), args, input,
-                   readStdout, readStderr);
-}
-/**
- * @brief Pass::executeGit easy wrapper for running git commands
- * @param args
- */
-void Pass::executeGit(int id, const QStringList &args, QString input,
-                      bool readStdout,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getGitExecutable(), args, input,
-                   readStdout, readStderr);
-}

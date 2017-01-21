@@ -12,13 +12,6 @@ class ImitatePass : public Pass {
 
   bool removeDir(const QString &dirName);
 
-  void executeWrapper(int id, const QString &app, const QStringList &args,
-                      bool readStdout = true, bool readStderr = true);
-
-  void executeWrapper(int id, const QString &app, const QStringList &args,
-                      QString input, bool readStdout = true,
-                      bool readStderr = true);
-
   void GitCommit(const QString &file, const QString &msg);
 
   bool hasSneakyPaths(const QStringList paths);
@@ -37,6 +30,13 @@ public:
   virtual void Init(QString path, const QList<UserInfo> &list) Q_DECL_OVERRIDE;
 
   void reencryptPath(QString dir);
+
+private:
+  void executeGit(int id, const QStringList &args, QString input = QString(),
+                  bool readStdout = true, bool readStderr = true);
+
+  void executeGpg(int id, const QStringList &args, QString input = QString(),
+                  bool readStdout = true,bool readStderr = true);
 signals:
   void startReencryptPath();
   void endReencryptPath();
