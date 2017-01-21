@@ -146,6 +146,8 @@ QList<UserInfo> Pass::listKeys(QString keystring, bool secret) {
       current_user.expiry.setTime_t(props[6].toUInt());
     } else if (current_user.name.isEmpty() && props[0] == "uid") {
       current_user.name = props[9];
+    }else if (props[0] == (secret ? "ssb" : "sub")) {
+        current_user.subkey_ids.append(props[4]);
     }
   }
   if (!current_user.key_id.isEmpty())

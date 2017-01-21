@@ -70,6 +70,10 @@ struct UserInfo {
    */
   QString key_id;
   /**
+   * @brief UserInfo::subkey_ids a list if the hexadecimal representation of the subkeys
+   */
+  QStringList subkey_ids;
+  /**
    * @brief UserInfo::validity GnuPG representation of validity
    * http://git.gnupg.org/cgi-bin/gitweb.cgi?p=gnupg.git;a=blob_plain;f=doc/DETAILS
    */

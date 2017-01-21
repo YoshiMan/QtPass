@@ -237,6 +237,15 @@ void ImitatePass::reencryptPath(QString dir) {
       gpgId = getRecipientList(fileName);
       gpgId.sort();
     }
+    QStringList gpgKeys;
+    foreach(QString key, gpgId){
+       QList<UserInfo> userInfos = listKeys(key);
+       foreach (UserInfo userInfo, userInfos) {
+           gpgKeys.append(userInfo.subkey_ids);
+       }
+    }
+    gpgKeys.sort();
+
     //  TODO(bezet): enable --with-colons for better future-proofness?
     QStringList args = {
         "-v",          "--no-secmem-warning", "--no-permission-warning",
@@ -258,7 +267,7 @@ void ImitatePass::reencryptPath(QString dir) {
       }
     }
     actualKeys.sort();
-    if (actualKeys != gpgId) {
+    if (actualKeys != gpgKeys) {
       // dbg()<< actualKeys << gpgId << getRecipientList(fileName);
       dbg() << "reencrypt " << fileName << " for " << gpgId;
       QString local_lastDecrypt = "Could not decrypt";
