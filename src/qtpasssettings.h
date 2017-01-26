@@ -1,6 +1,10 @@
 #ifndef QTPASSSETTINGS_H
 #define QTPASSSETTINGS_H
 
+#include "enums.h"
+#include "imitatepass.h"
+#include "pass.h"
+#include "realpass.h"
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QDir>
@@ -11,10 +15,6 @@
 #include <QSettings>
 #include <QSize>
 #include <QVariant>
-#include "pass.h"
-#include "realpass.h"
-#include "imitatepass.h"
-#include "enums.h"
 
 /*!
     \class QtPassSettings
@@ -56,6 +56,9 @@ public:
   static Enums::clipBoardType getClipBoardType(
       const Enums::clipBoardType &defaultvalue = Enums::CLIPBOARD_NEVER);
   static void setClipBoardType(const Enums::clipBoardType &clipBoardType);
+
+  static bool isUseSelection(const bool &defaultValue = QVariant().toBool());
+  static void setUseSelection(const bool &useSelection);
 
   static bool isUseAutoclear(const bool &defaultValue = QVariant().toBool());
   static void setUseAutoclear(const bool &useAutoclear);
@@ -184,10 +187,9 @@ public:
   static QHash<QString, QString> getProfiles();
   static void setProfiles(const QHash<QString, QString> &profiles);
 
-  static Pass* getPass();
-  static RealPass* getRealPass();
-  static ImitatePass* getImitatePass();
-
+  static Pass *getPass();
+  static RealPass *getRealPass();
+  static ImitatePass *getImitatePass();
 
 signals:
 
@@ -211,7 +213,6 @@ private:
   static Pass *pass;
   static RealPass realPass;
   static ImitatePass imitatePass;
-
 
   // functions
   static QSettings &getSettings();
@@ -243,7 +244,6 @@ private:
   static QVariant getSetting(const QString &key,
                              const QVariant &defaultValue = QVariant());
   static void setSetting(const QString &key, const QVariant &value);
-
 };
 
 #endif // QTPASSSETTINGS_H

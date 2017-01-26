@@ -6,6 +6,7 @@
 #include <QString>
 #ifdef Q_OS_WIN
 #include <windows.h>
+#include <bcrypt.h>
 #else
 #include <sys/time.h>
 #endif
@@ -145,7 +146,9 @@ void Util::qSleep(int ms) {
  * @param storeModel our storemodel to operate on
  * @return path
  */
-QString Util::getDir(const QModelIndex &index, bool forPass, const QFileSystemModel &model, const StoreModel &storeModel) {
+QString Util::getDir(const QModelIndex &index, bool forPass,
+                     const QFileSystemModel &model,
+                     const StoreModel &storeModel) {
   QString abspath = QDir(QtPassSettings::getPassStore()).absolutePath() + '/';
   if (!index.isValid())
     return forPass ? "" : abspath;
@@ -159,20 +162,31 @@ QString Util::getDir(const QModelIndex &index, bool forPass, const QFileSystemMo
   return filePath;
 }
 
-void Util::copyDir(const QString src, const QString dest)
-{
-    QDir srcDir(src);
-    if (srcDir.exists() == false){
-        return;
-    }
-    srcDir.mkpath(dest);
-    foreach (QString dir, srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-        copyDir(src + QDir::separator() + dir, dest + QDir::separator() + dir);
-    }
+void Util::copyDir(const QString src, const QString dest) {
+  QDir srcDir(src);
+  if (srcDir.exists() == false) {
+    return;
+  }
+  srcDir.mkpath(dest);
+  foreach (QString dir, srcDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+    copyDir(src + QDir::separator() + dir, dest + QDir::separator() + dir);
+  }
 
-    foreach (QString file, srcDir.entryList(QDir::Files)) {
-        QFile::copy(src + QDir::separator() + file, dest + QDir::separator() + file);
-    }
+  foreach (QString file, srcDir.entryList(QDir::Files)) {
+    QFile::copy(src + QDir::separator() + file,
+                dest + QDir::separator() + file);
+  }
+}
+
+int Util::rand() {
+#ifdef Q_OS_WIN
+  quint32 ret = 0;
+  if (FAILED(BCryptGenRandom(NULL, (PUCHAR)&ret, sizeof(ret), BCRYPT_USE_SYSTEM_PREFERRED_RNG)))
+      return qrand();
+  return ret%RAND_MAX;
+#else
+  return qrand();
+#endif
 }
 
 QString Util::removeOneTrailingSlash(const QString toRemoveParam){

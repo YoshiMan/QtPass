@@ -4,12 +4,13 @@
 #include "util.h"
 #include <QDirIterator>
 
+using namespace Enums;
+
 /**
  * @brief ImitatePass::ImitatePass for situaions when pass is not available
  * we imitate the behavior of pass https://www.passwordstore.org/
  */
 ImitatePass::ImitatePass() {}
-
 
 /**
  * @brief ImitatePass::GitInit git init wrapper
@@ -21,9 +22,7 @@ void ImitatePass::GitInit() {
 /**
  * @brief ImitatePass::GitPull git init wrapper
  */
-void ImitatePass::GitPull() {
-  executeGit(GIT_PULL,{"pull"});
-}
+void ImitatePass::GitPull() { executeGit(GIT_PULL, {"pull"}); }
 
 /**
  * @brief ImitatePass::GitPull_b git pull wrapper
@@ -36,8 +35,8 @@ void ImitatePass::GitPull_b() {
  * @brief ImitatePass::GitPush git init wrapper
  */
 void ImitatePass::GitPush() {
-  if(QtPassSettings::isUseGit()){
-      executeGit(GIT_PUSH, {"push"});
+  if (QtPassSettings::isUseGit()) {
+    executeGit(GIT_PUSH, {"push"});
   }
 }
 
@@ -53,18 +52,6 @@ void ImitatePass::Show(QString file) {
 }
 
 /**
- * @brief ImitatePass::Show_b show content of file, blocking version
- *
- * @returns process exitCode
- */
-int ImitatePass::Show_b(QString file) {
-  file = QtPassSettings::getPassStore() + file + ".gpg";
-  QStringList args = {"-d",      "--quiet",     "--yes", "--no-encrypt-to",
-                      "--batch", "--use-agent", file};
-  return exec.executeBlocking(QtPassSettings::getGpgExecutable(), args);
-}
-
-/**
  * @brief ImitatePass::Insert create new file with encrypted content
  *
  * @param file      file to be created
@@ -73,6 +60,7 @@ int ImitatePass::Show_b(QString file) {
  */
 void ImitatePass::Insert(QString file, QString newValue, bool overwrite) {
   file = file + ".gpg";
+  transactionHelper trans(this, PASS_INSERT);
   QStringList recipients = Pass::getRecipientList(file);
   if (recipients.isEmpty()) {
     //  TODO(bezet): probably throw here
@@ -89,15 +77,15 @@ void ImitatePass::Insert(QString file, QString newValue, bool overwrite) {
   if (overwrite)
     args.append("--yes");
   args.append("-");
-  executeGpg(PASS_INSERT, args,
-                 newValue);
+  executeGpg(PASS_INSERT, args, newValue);
   if (!QtPassSettings::isUseWebDav() && QtPassSettings::isUseGit()) {
+    //    TODO(bezet) why not?
     if (!overwrite)
       executeGit(GIT_ADD, {"add", file});
     QString path = QDir(QtPassSettings::getPassStore()).relativeFilePath(file);
     path.replace(QRegExp("\\.gpg$"), "");
-    QString msg = QString(overwrite ? "Edit" : "\"Add") + " for " + path +
-                  " using QtPass.";
+    QString msg =
+        QString(overwrite ? "Edit" : "Add") + " for " + path + " using QtPass.";
     GitCommit(file, msg);
   }
 }
@@ -113,10 +101,11 @@ void ImitatePass::GitCommit(const QString &file, const QString &msg) {
 }
 
 /**
- * @brief ImitatePass::Remove git init wrapper
+ * @brief ImitatePass::Remove custom implementation of "pass remove"
  */
 void ImitatePass::Remove(QString file, bool isDir) {
   file = QtPassSettings::getPassStore() + file;
+  transactionHelper trans(this, PASS_REMOVE);
   if (!isDir)
     file += ".gpg";
   if (QtPassSettings::isUseGit()) {
@@ -148,6 +137,7 @@ void ImitatePass::Init(QString path, const QList<UserInfo> &users) {
   QString gpgIdFile = path + ".gpg-id";
   QFile gpgId(gpgIdFile);
   bool addFile = false;
+  transactionHelper trans(this, PASS_INIT);
   if (QtPassSettings::isAddGPGId(true)) {
     QFileInfo checkFile(gpgIdFile);
     if (!checkFile.exists() || !checkFile.isFile())
@@ -282,19 +272,16 @@ void ImitatePass::reencryptPath(QString dir) {
       // dbg()<< actualKeys << gpgId << getRecipientList(fileName);
       dbg() << "reencrypt " << fileName << " for " << gpgId;
       QString local_lastDecrypt = "Could not decrypt";
-      emit lastDecrypt(local_lastDecrypt);
       args = QStringList{"-d",      "--quiet",     "--yes", "--no-encrypt-to",
                          "--batch", "--use-agent", fileName};
       exec.executeBlocking(QtPassSettings::getGpgExecutable(), args,
                            &local_lastDecrypt);
-      emit lastDecrypt(local_lastDecrypt);
 
       if (!local_lastDecrypt.isEmpty() &&
           local_lastDecrypt != "Could not decrypt") {
         if (local_lastDecrypt.right(1) != "\n")
           local_lastDecrypt += "\n";
 
-        emit lastDecrypt(local_lastDecrypt);
         QStringList recipients = Pass::getRecipientList(fileName);
         if (recipients.isEmpty()) {
           emit critical(tr("Can not edit"),
@@ -329,6 +316,7 @@ void ImitatePass::reencryptPath(QString dir) {
   }
   if (QtPassSettings::isAutoPush()) {
     emit statusMsg(tr("Updating password-store"), 2000);
+    //  TODO(bezet): this is non-blocking and shall be done outside
     GitPush();
   }
   emit endReencryptPath();
@@ -476,23 +464,73 @@ bool ImitatePass::hasSneakyPaths(const QStringList paths){
     return false;
 }
 
+
 /**
  * @brief ImitatePass::executeGpg easy wrapper for running gpg commands
  * @param args
  */
-void ImitatePass::executeGpg(int id, const QStringList &args, QString input,
-                      bool readStdout,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getGpgExecutable(), args, input,
-                   readStdout, readStderr);
+void ImitatePass::executeGpg(PROCESS id, const QStringList &args, QString input,
+                             bool readStdout, bool readStderr) {
+  executeWrapper(id, QtPassSettings::getGpgExecutable(), args, input,
+                 readStdout, readStderr);
 }
 /**
  * @brief ImitatePass::executeGit easy wrapper for running git commands
  * @param args
  */
-void ImitatePass::executeGit(int id, const QStringList &args, QString input,
-                      bool readStdout,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getGitExecutable(), args, input,
-                   readStdout, readStderr);
+void ImitatePass::executeGit(PROCESS id, const QStringList &args, QString input,
+                             bool readStdout, bool readStderr) {
+  executeWrapper(id, QtPassSettings::getGitExecutable(), args, input,
+                 readStdout, readStderr);
+}
+
+/**
+ * @brief ImitatePass::finished this function is overloaded to ensure
+ *                              identical behaviour to RealPass ie. only PASS_*
+ *                              processes are visible inside Pass::finish, so
+ *                              that interface-wise it all looks the same
+ * @param id
+ * @param exitCode
+ * @param out
+ * @param err
+ */
+void ImitatePass::finished(int id, int exitCode, const QString &out,
+                           const QString &err) {
+  dbg() << "Imitate Pass";
+  static QString transactionOutput;
+  PROCESS pid = transactionIsOver(static_cast<PROCESS>(id));
+  transactionOutput.append(out);
+
+  if (exitCode == 0) {
+    if (pid == INVALID)
+      return;
+  } else {
+    while (pid == INVALID) {
+      id = exec.cancelNext();
+      if (id == -1) {
+        //  this is probably irrecoverable and shall not happen
+        dbg() << "No such transaction!";
+        return;
+      }
+      pid = transactionIsOver(static_cast<PROCESS>(id));
+    }
+  }
+  Pass::finished(pid, exitCode, transactionOutput, err);
+  transactionOutput.clear();
+}
+
+/**
+ * @brief executeWrapper    overrided so that every execution is a transaction
+ * @param id
+ * @param app
+ * @param args
+ * @param input
+ * @param readStdout
+ * @param readStderr
+ */
+void ImitatePass::executeWrapper(PROCESS id, const QString &app,
+                                 const QStringList &args, QString input,
+                                 bool readStdout, bool readStderr) {
+  transactionAdd(id);
+  Pass::executeWrapper(id, app, args, input, readStdout, readStderr);
 }

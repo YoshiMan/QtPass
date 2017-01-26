@@ -1,6 +1,8 @@
 #include "realpass.h"
 #include "qtpasssettings.h"
 
+using namespace Enums;
+
 RealPass::RealPass() {}
 
 /**
@@ -37,20 +39,6 @@ void RealPass::GitPush() { executePass(GIT_PUSH, {"git", "push"}); }
  */
 void RealPass::Show(QString file) {
   executePass(PASS_SHOW, {"show", file}, "", true);
-}
-
-/**
- * @brief RealPass::Show_b pass show
- *
- * @param file      file to decrypt
- *
- * @return  if block is set, returns exit status of internal decryption
- * process
- *          otherwise returns QProcess::NormalExit
- */
-int RealPass::Show_b(QString file) {
-  return exec.executeBlocking(QtPassSettings::getPassExecutable(),
-                              {"show", file});
 }
 
 /**
@@ -92,17 +80,6 @@ void RealPass::Init(QString path, const QList<UserInfo> &users) {
 }
 
 /**
- * @brief RealPass::executePass easy wrapper for running pass
- * @param args
- */
-void RealPass::executePass(int id, const QStringList &args, QString input,
-                       bool readStdout ,bool readStderr)
-{
-    executeWrapper(id, QtPassSettings::getPassExecutable(), args , input,
-                   readStdout, readStderr);
-}
-
-/**
  * @brief RealPass::Move move a file (or folder)
  * @param src source file or folder
  * @param dest destination file or folder
@@ -114,7 +91,7 @@ void RealPass::Move(const QString src, const QString dest, const bool force) {
 
   // force mode?
   // pass uses always the force mode, when call from eg. QT. so we have to check
-  // if this are two files
+  // if this are to files
   // and the user didnt want to move force
   if (force == false && srcFileInfo.isFile() && destFileInfo.isFile()) {
     return;
@@ -124,6 +101,7 @@ void RealPass::Move(const QString src, const QString dest, const bool force) {
                         .relativeFilePath(QDir(src).absolutePath());
   QString passDest = QDir(QtPassSettings::getPassStore())
                          .relativeFilePath(QDir(dest).absolutePath());
+
   // replace .gpg, becaus pass doesnt use this
   passSrc.replace(QRegExp("\\.gpg$"), "");
   passDest.replace(QRegExp("\\.gpg$"), "");
@@ -157,19 +135,23 @@ void RealPass::Copy(const QString src, const QString dest, const bool force) {
   QString passDest = QDir(QtPassSettings::getPassStore())
                          .relativeFilePath(QDir(dest).absolutePath());
 
-  // remove the .gpg because pass will not work
-  if (srcFileInfo.isFile() && srcFileInfo.suffix() == "gpg") {
-    passSrc.replace(QRegExp("\\.gpg$"), "");
-  }
-  if (destFileInfo.isFile() && destFileInfo.suffix() == "gpg") {
-    passDest.replace(QRegExp("\\.gpg$"), "");
-  }
+  // replace .gpg, becaus pass doesnt use this
+  passSrc.replace(QRegExp("\\.gpg$"), "");
+  passDest.replace(QRegExp("\\.gpg$"), "");
+
   QStringList args;
   args << "cp";
-  if (force) {
-    args << "-f";
-  }
   args << passSrc;
   args << passDest;
   executePass(PASS_COPY, args);
+}
+
+/**
+ * @brief RealPass::executePass easy wrapper for running pass
+ * @param args
+ */
+void RealPass::executePass(PROCESS id, const QStringList &args, QString input,
+                           bool readStdout, bool readStderr) {
+  executeWrapper(id, QtPassSettings::getPassExecutable(), args, input,
+                 readStdout, readStderr);
 }

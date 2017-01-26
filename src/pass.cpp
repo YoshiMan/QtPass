@@ -3,13 +3,20 @@
 #include "qtpasssettings.h"
 #include "util.h"
 #include <QTextCodec>
+#include <map>
+
+using namespace std;
+using namespace Enums;
 
 /**
- * @brief Pass::Pass wrapper for using either pass or the pas imitation
+ * @brief Pass::Pass wrapper for using either pass or the pass imitation
  */
 Pass::Pass() : wrapperRunning(false), env(QProcess::systemEnvironment()) {
-  connect(&exec, SIGNAL(finished(int, const QString &, const QString &)), this,
-          SIGNAL(finished(int, const QString &, const QString &)));
+  connect(&exec,
+          static_cast<void (Executor::*)(int, int, const QString &,
+                                         const QString &)>(&Executor::finished),
+          this, &Pass::finished);
+
   // TODO(bezet): stop using process
   // connect(&process, SIGNAL(error(QProcess::ProcessError)), this,
   //        SIGNAL(error(QProcess::ProcessError)));
@@ -17,38 +24,35 @@ Pass::Pass() : wrapperRunning(false), env(QProcess::systemEnvironment()) {
   connect(&exec, &Executor::starting, this, &Pass::startingExecuteWrapper);
 }
 
-void Pass::executeWrapper(int id, const QString &app,
-                                 const QStringList &args, bool readStdout,
-                                 bool readStderr) {
+void Pass::executeWrapper(PROCESS id, const QString &app,
+                          const QStringList &args, bool readStdout,
+                          bool readStderr) {
   executeWrapper(id, app, args, QString(), readStdout, readStderr);
 }
 
-void Pass::executeWrapper(int id, const QString &app,
-                                 const QStringList &args, QString input,
-                                 bool readStdout, bool readStderr) {
-  QString d;
-  for (auto &i : args)
-    d += " " + i;
-  dbg() << app << d;
+void Pass::executeWrapper(PROCESS id, const QString &app,
+                          const QStringList &args, QString input,
+                          bool readStdout, bool readStderr) {
+  dbg() << app << args;
   exec.execute(id, QtPassSettings::getPassStore(), app, args, input, readStdout,
                readStderr);
 }
 
-void Pass::init(){
-  #ifdef __APPLE__
-    // If it exists, add the gpgtools to PATH
-    if (QFile("/usr/local/MacGPG2/bin").exists())
-      env.replaceInStrings("PATH=", "PATH=/usr/local/MacGPG2/bin:");
-    // Add missing /usr/local/bin
-    if (env.filter("/usr/local/bin").isEmpty())
-      env.replaceInStrings("PATH=", "PATH=/usr/local/bin:");
-  #endif
+void Pass::init() {
+#ifdef __APPLE__
+  // If it exists, add the gpgtools to PATH
+  if (QFile("/usr/local/MacGPG2/bin").exists())
+    env.replaceInStrings("PATH=", "PATH=/usr/local/MacGPG2/bin:");
+  // Add missing /usr/local/bin
+  if (env.filter("/usr/local/bin").isEmpty())
+    env.replaceInStrings("PATH=", "PATH=/usr/local/bin:");
+#endif
 
-    if (!QtPassSettings::getGpgHome().isEmpty()) {
-      QDir absHome(QtPassSettings::getGpgHome());
-      absHome.makeAbsolute();
-      env << "GNUPGHOME=" + absHome.path();
-    }
+  if (!QtPassSettings::getGpgHome().isEmpty()) {
+    QDir absHome(QtPassSettings::getGpgHome());
+    absHome.makeAbsolute();
+    env << "GNUPGHOME=" + absHome.path();
+  }
 }
 
 /**
@@ -58,21 +62,20 @@ void Pass::init(){
  * @param charset to use for generation
  * @return the password
  */
-//  TODO(bezet): this should definitely throw
-QString Pass::Generate(int length, const QString &charset) {
+QString Pass::Generate_b(int length, const QString &charset) {
   QString passwd;
   if (QtPassSettings::isUsePwgen()) {
     // --secure goes first as it overrides --no-* otherwise
     QStringList args;
     args.append("-1");
     if (QtPassSettings::isLessRandom())
-      args.append("--secure ");
-    args.append(QtPassSettings::isAvoidCapitals() ? "--no-capitalize "
-                                                  : "--capitalize ");
-    args.append(QtPassSettings::isAvoidNumbers() ? "--no-numerals "
-                                                 : "--numerals ");
+      args.append("--secure");
+    args.append(QtPassSettings::isAvoidCapitals() ? "--no-capitalize"
+                                                  : "--capitalize");
+    args.append(QtPassSettings::isAvoidNumbers() ? "--no-numerals"
+                                                 : "--numerals");
     if (QtPassSettings::isUseSymbols())
-      args.append("--symbols ");
+      args.append("--symbols");
     args.append(QString::number(length));
     QString p_out;
     //  TODO(bezet): try-catch here(2 statuses to merge o_O)
@@ -88,7 +91,7 @@ QString Pass::Generate(int length, const QString &charset) {
   } else {
     if (charset.length() > 0) {
       for (int i = 0; i < length; ++i) {
-        int index = qrand() % charset.length();
+        int index = Util::rand() % charset.length();
         QChar nextChar = charset.at(index);
         passwd.append(nextChar);
       }
@@ -107,9 +110,10 @@ QString Pass::Generate(int length, const QString &charset) {
  * @param batch GnuPG style configuration string
  */
 void Pass::GenerateGPGKeys(QString batch) {
-  exec.execute(PASSWD_GENERATE, QtPassSettings::getGpgExecutable(),
-               {"--gen-key", "--no-tty", "--batch"}, batch);
-  // TODO check status / error messages
+  executeWrapper(GPG_GENKEYS, QtPassSettings::getGpgExecutable(),
+                 {"--gen-key", "--no-tty", "--batch"}, batch);
+  // TODO check status / error messages - probably not here, it's just started
+  // here, see finished for details
   // https://github.com/IJHack/QtPass/issues/202#issuecomment-251081688
 }
 
@@ -153,6 +157,60 @@ QList<UserInfo> Pass::listKeys(QString keystring, bool secret) {
   if (!current_user.key_id.isEmpty())
     users.append(current_user);
   return users;
+}
+
+/**
+ * @brief Pass::processFinished reemits specific signal based on what process
+ * has finished
+ * @param id    id of Pass process that was scheduled and finished
+ * @param exitCode  return code of a process
+ * @param out   output generated by process(if capturing was requested, empty
+ *              otherwise)
+ * @param err   error output generated by process(if capturing was requested,
+ *              or error occured)
+ */
+void Pass::finished(int id, int exitCode, const QString &out,
+                    const QString &err) {
+  //  TODO(bezet): remove !
+  dbg() << id << exitCode << out << err;
+
+  PROCESS pid = static_cast<PROCESS>(id);
+  if (exitCode != 0) {
+    emit processErrorExit(exitCode, err);
+    return;
+  }
+  switch (pid) {
+  case GIT_INIT:
+    emit finishedGitInit(out, err);
+    break;
+  case GIT_PULL:
+    emit finishedGitPull(out, err);
+    break;
+  case GIT_PUSH:
+    emit finishedGitPush(out, err);
+    break;
+  case PASS_SHOW:
+    emit finishedShow(out);
+    break;
+  case PASS_INSERT:
+    emit finishedInsert(out, err);
+    break;
+  case PASS_REMOVE:
+    emit finishedRemove(out, err);
+    break;
+  case PASS_INIT:
+    emit finishedInit(out, err);
+    break;
+  case PASS_MOVE:
+    emit finishedMove(out, err);
+    break;
+  case PASS_COPY:
+    emit finishedCopy(out, err);
+    break;
+  default:
+    dbg() << "Unhandled process type" << pid;
+    break;
+  }
 }
 
 /**
@@ -226,4 +284,3 @@ QString Pass::getRecipientString(QString for_file, QString separator,
     recipients_str += separator + '"' + recipient + '"';
   return recipients_str;
 }
-

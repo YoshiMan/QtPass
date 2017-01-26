@@ -1,28 +1,25 @@
 #include "storemodel.h"
 #include <QDebug>
-#include <QStringListModel>
-#include <QMimeData>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QStringListModel>
 
-
-QDataStream &operator<<(QDataStream &out, const dragAndDropInfoPasswordStore &dragAndDropInfoPasswordStore)
-{
-    out << dragAndDropInfoPasswordStore.isDir
-        << dragAndDropInfoPasswordStore.isFile
-        << dragAndDropInfoPasswordStore.path;
-    return out;
+QDataStream &
+operator<<(QDataStream &out,
+           const dragAndDropInfoPasswordStore &dragAndDropInfoPasswordStore) {
+  out << dragAndDropInfoPasswordStore.isDir
+      << dragAndDropInfoPasswordStore.isFile
+      << dragAndDropInfoPasswordStore.path;
+  return out;
 }
 
-
-
-QDataStream &operator>>(QDataStream &in, dragAndDropInfoPasswordStore &dragAndDropInfoPasswordStore)
-{
-    in >> dragAndDropInfoPasswordStore.isDir
-       >> dragAndDropInfoPasswordStore.isFile
-       >> dragAndDropInfoPasswordStore.path;
-    return in;
+QDataStream &
+operator>>(QDataStream &in,
+           dragAndDropInfoPasswordStore &dragAndDropInfoPasswordStore) {
+  in >> dragAndDropInfoPasswordStore.isDir >>
+      dragAndDropInfoPasswordStore.isFile >> dragAndDropInfoPasswordStore.path;
+  return in;
 }
-
 
 /**
  * @brief StoreModel::StoreModel
@@ -65,11 +62,11 @@ bool StoreModel::ShowThis(const QModelIndex index) const {
         break;
     }
   } else {
-      QModelIndex useIndex = sourceModel()->index(index.row(), 0, index.parent());
-      QString path = fs->filePath(useIndex);
-      path = QDir(store).relativeFilePath(path);
-      path.replace(QRegExp("\\.gpg$"), "");
-      retVal = path.contains(filterRegExp());
+    QModelIndex useIndex = sourceModel()->index(index.row(), 0, index.parent());
+    QString path = fs->filePath(useIndex);
+    path = QDir(store).relativeFilePath(path);
+    path.replace(QRegExp("\\.gpg$"), "");
+    retVal = path.contains(filterRegExp());
   }
   return retVal;
 }
@@ -111,35 +108,31 @@ QVariant StoreModel::data(const QModelIndex &index, int role) const {
  * @brief StoreModel::supportedDropActions enable drop.
  * @return
  */
-Qt::DropActions StoreModel::supportedDropActions() const
-{
-    return Qt::CopyAction | Qt::MoveAction;
+Qt::DropActions StoreModel::supportedDropActions() const {
+  return Qt::CopyAction | Qt::MoveAction;
 }
 /**
  * @brief StoreModel::supportedDragActions enable drag.
  * @return
  */
-Qt::DropActions StoreModel::supportedDragActions() const
-{
-    return Qt::CopyAction | Qt::MoveAction;
+Qt::DropActions StoreModel::supportedDragActions() const {
+  return Qt::CopyAction | Qt::MoveAction;
 }
 
-Qt::ItemFlags StoreModel::flags(const QModelIndex &index) const
-{
-    Qt::ItemFlags defaultFlags = QSortFilterProxyModel::flags(index);
+Qt::ItemFlags StoreModel::flags(const QModelIndex &index) const {
+  Qt::ItemFlags defaultFlags = QSortFilterProxyModel::flags(index);
 
-    if (index.isValid()){
-        return Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | defaultFlags;
-    }else{
-        return Qt::ItemIsDropEnabled | defaultFlags;
-    }
+  if (index.isValid()) {
+    return Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | defaultFlags;
+  } else {
+    return Qt::ItemIsDropEnabled | defaultFlags;
+  }
 }
 
-QStringList StoreModel::mimeTypes() const
-{
-    QStringList types;
-    types << "application/vnd+qtpass.dragAndDropInfoPasswordStore";
-    return types;
+QStringList StoreModel::mimeTypes() const {
+  QStringList types;
+  types << "application/vnd+qtpass.dragAndDropInfoPasswordStore";
+  return types;
 }
 
 QMimeData *StoreModel::mimeData(const QModelIndexList &indexes) const
@@ -166,57 +159,63 @@ QMimeData *StoreModel::mimeData(const QModelIndexList &indexes) const
     return mimeData;
 }
 
-
-
-
-bool StoreModel::canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) const
-{
+bool StoreModel::canDropMimeData(const QMimeData *data, Qt::DropAction action,
+                                 int row, int column,
+                                 const QModelIndex &parent) const {
     if (data->hasFormat("application/vnd+qtpass.dragAndDropInfoPasswordStore") == false){
         return false;
     }
 
-    if (column > 0){
-        return false;
-    }
 
-    QModelIndex useIndex = this->index(parent.row(), parent.column(), parent.parent());
-    QByteArray encodedData = data->data("application/vnd+qtpass.dragAndDropInfoPasswordStore");
-    QDataStream stream(&encodedData, QIODevice::ReadOnly);
-    dragAndDropInfoPasswordStore info;
-    stream >> info;
-
-    // you can drop a folder on a folder
-    if  (fs->fileInfo(mapToSource(useIndex)).isDir() && info.isDir){
-        return true;
-    }
-    // you can drop a file on a folder
-    if  (fs->fileInfo(mapToSource(useIndex)).isDir() && info.isFile){
-        return true;
-    }
-    // you can drop a file on a file
-    if  (fs->fileInfo(mapToSource(useIndex)).isFile() && info.isFile){
-        return true;
-    }
-
+  QModelIndex useIndex =
+      this->index(parent.row(), parent.column(), parent.parent());
+  QByteArray encodedData =
+      data->data("application/vnd+qtpass.dragAndDropInfoPasswordStore");
+  QDataStream stream(&encodedData, QIODevice::ReadOnly);
+  dragAndDropInfoPasswordStore info;
+  stream >> info;
+  if (data->hasFormat("application/vnd+qtpass.dragAndDropInfoPasswordStore") ==
+      false)
     return false;
+
+  if (column > 0) {
+    return false;
+  }
+
+  // you can drop a folder on a folder
+  if (fs->fileInfo(mapToSource(useIndex)).isDir() && info.isDir) {
+    return true;
+  }
+  // you can drop a file on a folder
+  if (fs->fileInfo(mapToSource(useIndex)).isDir() && info.isFile) {
+    return true;
+  }
+  // you can drop a file on a file
+  if (fs->fileInfo(mapToSource(useIndex)).isFile() && info.isFile) {
+    return true;
+  }
+
+  return false;
 }
 
-bool StoreModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent)
-{
-    if (!canDropMimeData(data, action, row, column, parent))
-        return false;
+bool StoreModel::dropMimeData(const QMimeData *data, Qt::DropAction action,
+                              int row, int column, const QModelIndex &parent) {
+  if (!canDropMimeData(data, action, row, column, parent))
+    return false;
 
-    if (action == Qt::IgnoreAction){
-        return true;
-    }
-    QByteArray encodedData = data->data("application/vnd+qtpass.dragAndDropInfoPasswordStore");
+  if (action == Qt::IgnoreAction) {
+    return true;
+  }
+  QByteArray encodedData =
+      data->data("application/vnd+qtpass.dragAndDropInfoPasswordStore");
 
-    QDataStream stream(&encodedData, QIODevice::ReadOnly);
-    dragAndDropInfoPasswordStore info;
-    stream >> info;
-    QModelIndex destIndex = this->index(parent.row(), parent.column(), parent.parent());
-    QFileInfo destFileInfo = fs->fileInfo(mapToSource(destIndex));
-    QFileInfo srcFileInfo = QFileInfo(info.path);
+  QDataStream stream(&encodedData, QIODevice::ReadOnly);
+  dragAndDropInfoPasswordStore info;
+  stream >> info;
+  QModelIndex destIndex =
+      this->index(parent.row(), parent.column(), parent.parent());
+  QFileInfo destFileInfo = fs->fileInfo(mapToSource(destIndex));
+  QFileInfo srcFileInfo = QFileInfo(info.path);
     QString srcAbs = srcFileInfo.absoluteFilePath();
     QString destAbs = destFileInfo.absoluteFilePath();
     if(info.isDir){
@@ -250,5 +249,6 @@ bool StoreModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int 
         }
 
     }
-    return true;
+
+  return true;
 }

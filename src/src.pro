@@ -39,6 +39,7 @@ SOURCES   += main.cpp \
              imitatepass.cpp \
              executor.cpp \
              renamedialog.cpp
+             simpletransaction.cpp
 
 HEADERS   += mainwindow.h \
              configdialog.h \
@@ -61,6 +62,7 @@ HEADERS   += mainwindow.h \
              debughelper.h \
              executor.h \
              renamedialog.h
+             simpletransaction.h
 
 FORMS     += mainwindow.ui \
              configdialog.ui \
@@ -165,7 +167,7 @@ win32 {
     }
     gcc:QMAKE_LFLAGS += -Wl,--dynamicbase -Wl,--nxcompat
     msvc:QMAKE_LFLAGS += /DYNAMICBASE /NXCOMPAT
-    LIBS    += -lmpr
+    LIBS    += -lmpr -lbcrypt
 } else:macx {
     ICON = ../artwork/icon.icns
     QMAKE_INFO_PLIST = ../qtpass.plist

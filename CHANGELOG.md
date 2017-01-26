@@ -6,24 +6,34 @@
 
 **Implemented enhancements:**
 
+- Feature Request: Use primary selection instead of clipboard [\#280](https://github.com/IJHack/QtPass/issues/280)
+- Add primary selection as clipboard option [\#281](https://github.com/IJHack/QtPass/pull/281) ([annejan](https://github.com/annejan))
 - Feature: CTRL/CMD + Q closes the mainwindow \#258 [\#259](https://github.com/IJHack/QtPass/pull/259) ([YoshiMan](https://github.com/YoshiMan))
 - Feature/testing moved sources to src added tests [\#257](https://github.com/IJHack/QtPass/pull/257) ([annejan](https://github.com/annejan))
 - enabled drag and drop support for passwords and passwordfolders [\#245](https://github.com/IJHack/QtPass/pull/245) ([YoshiMan](https://github.com/YoshiMan))
 
 **Fixed bugs:**
 
+- Do not hide passwords and no generator [\#267](https://github.com/IJHack/QtPass/issues/267)
 - Weird behavior when turning on git support \(auto push/pull\) with non-clean git dir [\#128](https://github.com/IJHack/QtPass/issues/128)
 
 **Closed issues:**
 
+- Adding new password on Windows does not create git commit [\#277](https://github.com/IJHack/QtPass/issues/277)
+- There is no `git cp` [\#272](https://github.com/IJHack/QtPass/issues/272)
 - pass working fine but qtprocess failure with qtpass [\#260](https://github.com/IJHack/QtPass/issues/260)
 - Feature: CTRL/CMD + Q closes the mainwindow [\#258](https://github.com/IJHack/QtPass/issues/258)
+- Refactoring: removal of lastDecrypt [\#256](https://github.com/IJHack/QtPass/issues/256)
 - Pass environment not set-up correctly [\#250](https://github.com/IJHack/QtPass/issues/250)
 - Make fails - std c++11 not set [\#244](https://github.com/IJHack/QtPass/issues/244)
 - Double-clicking might open previous entry instead of one double-clicked on [\#243](https://github.com/IJHack/QtPass/issues/243)
 
 **Merged pull requests:**
 
+- small band aid fix for password generation on windows [\#276](https://github.com/IJHack/QtPass/pull/276) ([treat1](https://github.com/treat1))
+- Final step in process mgmt refactoring [\#275](https://github.com/IJHack/QtPass/pull/275) ([tezeb](https://github.com/tezeb))
+- Fix pwgen and refactor Pass::finished [\#271](https://github.com/IJHack/QtPass/pull/271) ([tezeb](https://github.com/tezeb))
+- Process specific signals for process management [\#270](https://github.com/IJHack/QtPass/pull/270) ([tezeb](https://github.com/tezeb))
 - \#239 reencrypting after a drag and drop action [\#261](https://github.com/IJHack/QtPass/pull/261) ([YoshiMan](https://github.com/YoshiMan))
 - this if evaluetes ervery time to true [\#255](https://github.com/IJHack/QtPass/pull/255) ([YoshiMan](https://github.com/YoshiMan))
 - executeing pass show before editpassword dialog shows up [\#254](https://github.com/IJHack/QtPass/pull/254) ([YoshiMan](https://github.com/YoshiMan))
